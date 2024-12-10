@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import { ImagePreview } from "@/components/image-preview";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const IMAGE_SIZES = [
   "1024x1024",
@@ -29,11 +30,11 @@ export function ImageGenerationForm() {
   const [guidanceScale, setGuidanceScale] = useState(7.5);
   const [seed, setSeed] = useState<number | null>(null);
   const [promptEnhancement, setPromptEnhancement] = useState(true);
+  const [isPublic, setIsPublic] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const router = useRouter();
-  const supabase = createClientComponentClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +58,7 @@ export function ImageGenerationForm() {
           guidance_scale: guidanceScale,
           seed: seed || Math.floor(Math.random() * 999999),
           prompt_enhancement: promptEnhancement,
+          isPublic,
         }),
       });
 
@@ -67,17 +69,6 @@ export function ImageGenerationForm() {
       const { imageUrl } = await response.json();
       setPreviewUrl(imageUrl);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      await supabase.from("images").insert({
-        user_id: user?.id,
-        prompt,
-        url: imageUrl,
-      });
-
-      router.push("/dashboard/gallery");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "生成图片时发生错误");
@@ -242,20 +233,31 @@ export function ImageGenerationForm() {
             />
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <input
-            type="checkbox"
-            id="promptEnhancement"
-            checked={promptEnhancement}
-            onChange={(e) => setPromptEnhancement(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300"
-          />
-          <label
-            htmlFor="promptEnhancement"
-            className="text-sm font-medium leading-none"
-          >
-            提示词增强（自动优化提示词）
-          </label>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="promptEnhancement"
+              checked={promptEnhancement}
+              onChange={(e) => setPromptEnhancement(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <label
+              htmlFor="promptEnhancement"
+              className="text-sm font-medium leading-none"
+            >
+              提示词增强
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="public-mode"
+              checked={isPublic}
+              onCheckedChange={setIsPublic}
+              disabled={loading}
+            />
+            <Label htmlFor="public-mode">公开图片</Label>
+          </div>
         </div>
         {error && <div className="text-sm text-red-500">{error}</div>}
         <button

@@ -18,8 +18,31 @@ export async function POST(request: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { prompt } = await request.json();
-    console.log("Request payload:", { prompt });
+    const {
+      prompt,
+      model,
+      negative_prompt,
+      image_size,
+      batch_size,
+      num_inference_steps,
+      guidance_scale,
+      seed,
+      prompt_enhancement,
+      isPublic = true,
+    } = await request.json();
+
+    console.log("Request payload:", {
+      prompt,
+      model,
+      negative_prompt,
+      image_size,
+      batch_size,
+      num_inference_steps,
+      guidance_scale,
+      seed,
+      prompt_enhancement,
+      isPublic,
+    });
 
     // 调用AI图片生成API
     const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/images/generations`;
@@ -91,6 +114,20 @@ export async function POST(request: Request) {
     const { data: publicUrl } = supabase.storage
       .from("images")
       .getPublicUrl(filename);
+
+    // 保存图片记录到数据库
+    const { error: dbError } = await supabase.from("images").insert({
+      user_id: user.id,
+      prompt,
+      style: model,
+      url: publicUrl.publicUrl,
+      is_public: isPublic,
+    });
+
+    if (dbError) {
+      console.error("Database error:", dbError);
+      throw dbError;
+    }
 
     return NextResponse.json({ imageUrl: publicUrl.publicUrl });
   } catch (error) {

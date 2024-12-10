@@ -18,13 +18,20 @@ export default async function MainLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 只有访问 dashboard 路径时才需要登录
+  // 获取当前路径
   const pathname = new URL(
     (await cookieStore).get("next-url")?.value || "/",
     "http://localhost"
   ).pathname;
+
+  // 如果用户未登录且访问需要认证的路径，重定向到登录页
   if (!user && pathname.startsWith("/dashboard")) {
     redirect("/login");
+  }
+
+  // 如果用户已登录且访问登录/注册页，重定向到仪表板
+  if (user && (pathname === "/login" || pathname === "/register")) {
+    redirect("/dashboard");
   }
 
   return (
